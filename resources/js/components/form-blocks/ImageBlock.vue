@@ -1,33 +1,69 @@
 <template>
-  <div class="form-field">
+  <div v-if="!isHidden" class="form-field" :class="widthClass">
     <div class="flex justify-center">
-      <div v-if="src" class="max-w-full">
-        <img 
-          :src="src" 
-          :alt="alt || 'Image'" 
-          class="max-w-full h-auto rounded-lg shadow-sm"
-        />
-        <p v-if="alt" class="text-sm text-muted-foreground text-center mt-2">{{ alt }}</p>
-      </div>
-      <div v-else class="w-full h-32 bg-muted rounded-lg flex items-center justify-center">
-        <div class="text-center text-muted-foreground">
-          <div class="text-4xl mb-2">🖼️</div>
-          <div class="text-sm">No image selected</div>
-        </div>
-      </div>
+      <img 
+        :src="imageUrl" 
+        :alt="altText"
+        class="max-w-full h-auto rounded-lg"
+        :class="imageSizeClasses"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
-  src?: string
-  alt?: string
+  imageUrl?: string
+  altText?: string
+  imageSize?: 'sm' | 'md' | 'lg'
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  width?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  src: '',
-  alt: ''
+const props = withDefaults(defineProps<Props>(), {
+  imageUrl: 'https://via.placeholder.com/400x300',
+  altText: 'Image',
+  imageSize: 'md',
+  hidden: false,
+  width: 'full'
+})
+
+// Computed properties to handle the field states
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
+})
+
+const imageSizeClasses = computed(() => {
+  switch (props.imageSize) {
+    case 'sm':
+      return 'max-w-xs'
+    case 'lg':
+      return 'max-w-2xl'
+    default:
+      return 'max-w-lg'
+  }
+})
+
+// Computed property for width classes
+const widthClass = computed(() => {
+  switch (props.width) {
+    case '1/2':
+      return 'w-1/2'
+    case '1/3':
+      return 'w-1/3'
+    case '2/3':
+      return 'w-2/3'
+    case '1/4':
+      return 'w-1/4'
+    case '3/4':
+      return 'w-3/4'
+    case 'full':
+    default:
+      return 'w-full'
+  }
 })
 </script>
 

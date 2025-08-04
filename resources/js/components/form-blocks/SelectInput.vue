@@ -1,16 +1,21 @@
 <template>
-  <div class="form-field space-y-2">
-    <Label v-if="label" class="text-sm font-medium">
+  <div v-if="!isHidden" class="form-field space-y-2">
+    <Label v-if="label && !hideFieldName" class="text-sm font-medium">
       {{ label }}
-      <span v-if="required" class="text-destructive">*</span>
+      <Badge v-if="isRequired" variant="destructive" class="text-xs ml-1">Required</Badge>
     </Label>
+    <p v-if="helpText && helpTextPosition === 'above'" class="text-xs text-muted-foreground">
+      {{ helpText }}
+    </p>
     <select
-      :required="required"
+      :required="isRequired"
+      :disabled="isDisabled"
       :value="modelValue"
       @change="$emit('update:value', ($event.target as HTMLSelectElement).value)"
-      class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+      class="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+      :class="{ 'opacity-50 cursor-not-allowed': isDisabled }"
     >
-      <option value="" disabled selected>Select an option...</option>
+      <option value="" disabled selected>{{ placeholder }}</option>
       <option 
         v-for="option in options" 
         :key="option" 
@@ -19,26 +24,61 @@
         {{ option }}
       </option>
     </select>
+    <p v-if="helpText && helpTextPosition === 'below'" class="text-xs text-muted-foreground">
+      {{ helpText }}
+    </p>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 
 interface Props {
   label?: string
+  placeholder?: string
   required?: boolean
-  options: string[]
+  disabled?: boolean
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  hideFieldName?: boolean
+  width?: string
+  options?: string[]
   modelValue?: string
+  helpText?: string
+  helpTextPosition?: 'above' | 'below'
 }
 
-withDefaults(defineProps<Props>(), {
-  required: false
+const props = withDefaults(defineProps<Props>(), {
+  placeholder: 'Select an option...',
+  required: false,
+  disabled: false,
+  hidden: false,
+  hideFieldName: false,
+  width: 'full',
+  options: () => [],
+  helpTextPosition: 'below'
 })
 
 defineEmits<{
   'update:value': [value: string]
 }>()
+
+// Computed properties to handle the field states
+const isRequired = computed(() => {
+  return props.fieldState === 'required' || props.required
+})
+
+const isDisabled = computed(() => {
+  return props.fieldState === 'disabled' || props.disabled
+})
+
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
+})
+
+
 </script>
 
 <style scoped>

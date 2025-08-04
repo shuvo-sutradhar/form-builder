@@ -1,45 +1,95 @@
 <template>
-  <div class="form-field space-y-2">
-    <Label v-if="label" class="text-sm font-medium">
+  <div v-if="!isHidden" class="form-field space-y-2" :class="widthClass">
+    <Label v-if="label && !hideFieldName" class="text-sm font-medium">
       {{ label }}
-      <span v-if="required" class="text-destructive">*</span>
+      <Badge v-if="isRequired" variant="destructive" class="text-xs ml-1">Required</Badge>
     </Label>
-    <div class="flex items-center gap-1">
+    <div class="flex items-center space-x-1">
       <button
-        v-for="star in max" 
+        v-for="star in maxRating"
         :key="star"
         type="button"
-        @click="$emit('update:value', star)"
-        class="text-2xl transition-colors hover:text-yellow-400"
-        :class="star <= (modelValue || 0) ? 'text-yellow-400' : 'text-gray-300'"
+        :disabled="isDisabled"
+        @click="setRating(star)"
+        class="text-2xl transition-colors"
+        :class="[
+          star <= modelValue ? 'text-yellow-400' : 'text-gray-300',
+          isDisabled ? 'cursor-not-allowed opacity-50' : 'hover:text-yellow-400 cursor-pointer'
+        ]"
       >
         ★
       </button>
-      <span v-if="modelValue" class="ml-2 text-sm text-muted-foreground">
-        {{ modelValue }} of {{ max }}
-      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 
 interface Props {
   label?: string
   required?: boolean
-  max?: number
+  disabled?: boolean
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  hideFieldName?: boolean
+  width?: string
+  maxRating?: number
   modelValue?: number
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   required: false,
-  max: 5
+  disabled: false,
+  hidden: false,
+  hideFieldName: false,
+  width: 'full',
+  maxRating: 5
 })
 
-defineEmits<{
+const emit = defineEmits<{
   'update:value': [value: number]
 }>()
+
+// Computed properties to handle the field states
+const isRequired = computed(() => {
+  return props.fieldState === 'required' || props.required
+})
+
+const isDisabled = computed(() => {
+  return props.fieldState === 'disabled' || props.disabled
+})
+
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
+})
+
+// Computed property for width classes
+const widthClass = computed(() => {
+  switch (props.width) {
+    case '1/2':
+      return 'w-1/2'
+    case '1/3':
+      return 'w-1/3'
+    case '2/3':
+      return 'w-2/3'
+    case '1/4':
+      return 'w-1/4'
+    case '3/4':
+      return 'w-3/4'
+    case 'full':
+    default:
+      return 'w-full'
+  }
+})
+
+const setRating = (rating: number) => {
+  if (!isDisabled.value) {
+    emit('update:value', rating)
+  }
+}
 </script>
 
 <style scoped>

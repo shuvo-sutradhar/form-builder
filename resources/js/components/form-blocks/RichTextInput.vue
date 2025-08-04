@@ -1,8 +1,8 @@
 <template>
-  <div class="space-y-2">
-    <Label v-if="label" :for="id" class="text-sm font-medium">
+  <div v-if="!isHidden" class="form-field space-y-2" :class="widthClass">
+    <Label v-if="label && !hideFieldName" class="text-sm font-medium">
       {{ label }}
-      <span v-if="required" class="text-destructive">*</span>
+      <Badge v-if="isRequired" variant="destructive" class="text-xs ml-1">Required</Badge>
     </Label>
     
     <div class="border border-border rounded-md">
@@ -13,6 +13,7 @@
           :key="tool.name"
           variant="ghost"
           size="sm"
+          :disabled="isDisabled"
           @click="tool.action"
           :class="{ 'bg-primary text-primary-foreground': tool.active }"
           class="h-8 w-8 p-0"
@@ -26,15 +27,12 @@
         ref="editorRef"
         class="min-h-[120px] p-3 focus:outline-none focus:ring-2 focus:ring-primary/20"
         contenteditable="true"
+        :class="{ 'opacity-50 cursor-not-allowed': isDisabled }"
         @input="handleInput"
         @paste="handlePaste"
         v-html="modelValue"
       ></div>
     </div>
-    
-    <p v-if="helpText" class="text-xs text-muted-foreground">
-      {{ helpText }}
-    </p>
   </div>
 </template>
 
@@ -42,6 +40,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { 
   Bold, 
   Italic, 
@@ -56,24 +55,62 @@ import {
 } from 'lucide-vue-next'
 
 interface Props {
-  id: string
   label?: string
   placeholder?: string
   required?: boolean
-  helpText?: string
+  disabled?: boolean
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  hideFieldName?: boolean
+  width?: string
   modelValue?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: '',
-  required: false
+  required: false,
+  disabled: false,
+  hidden: false,
+  hideFieldName: false,
+  width: 'full'
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string]
+  'update:value': [value: string]
 }>()
 
 const editorRef = ref<HTMLElement>()
+
+// Computed properties to handle the field states
+const isRequired = computed(() => {
+  return props.fieldState === 'required' || props.required
+})
+
+const isDisabled = computed(() => {
+  return props.fieldState === 'disabled' || props.disabled
+})
+
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
+})
+
+// Computed property for width classes
+const widthClass = computed(() => {
+  switch (props.width) {
+    case '1/2':
+      return 'w-1/2'
+    case '1/3':
+      return 'w-1/3'
+    case '2/3':
+      return 'w-2/3'
+    case '1/4':
+      return 'w-1/4'
+    case '3/4':
+      return 'w-3/4'
+    case 'full':
+    default:
+      return 'w-full'
+  }
+})
 
 const toolbarTools = computed(() => [
   {
@@ -125,28 +162,12 @@ const toolbarTools = computed(() => [
     icon: AlignRight,
     action: () => document.execCommand('justifyRight', false),
     active: false
-  },
-  { name: 'separator3', icon: null, action: () => {}, active: false },
-  {
-    name: 'link',
-    icon: Link,
-    action: () => {
-      const url = prompt('Enter URL:')
-      if (url) document.execCommand('createLink', false, url)
-    },
-    active: false
-  },
-  {
-    name: 'unlink',
-    icon: Unlink,
-    action: () => document.execCommand('unlink', false),
-    active: false
   }
 ])
 
 const handleInput = () => {
   if (editorRef.value) {
-    emit('update:modelValue', editorRef.value.innerHTML)
+    emit('update:value', editorRef.value.innerHTML)
   }
 }
 
@@ -164,13 +185,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.form-field {
+  margin-bottom: 1rem;
+}
+
 [contenteditable]:empty:before {
   content: attr(data-placeholder);
   color: #9ca3af;
   pointer-events: none;
-}
-
-[contenteditable]:focus {
-  outline: none;
 }
 </style> 

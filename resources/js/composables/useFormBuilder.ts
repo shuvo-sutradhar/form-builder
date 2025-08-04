@@ -6,13 +6,46 @@ export interface FormBlock {
   label: string
   placeholder?: string
   required: boolean
+  disabled?: boolean
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  hideFieldName?: boolean
+  width?: string
   validation?: ValidationRule[]
   options?: string[]
   min?: number
   max?: number
   step?: number
   defaultValue?: any
+  value?: any
   helpText?: string
+  helpTextPosition?: 'above' | 'below'
+  maxLength?: number
+  showCharacterLimit?: boolean
+  generateUniqueId?: boolean
+  generateAutoIncrementId?: boolean
+  multiLine?: boolean
+  secretInput?: boolean
+  logicOperator?: 'and' | 'or'
+  conditions?: Array<{
+    field: string
+    operator: string
+    value: string
+    group?: boolean
+  }>
+  logicActions?: {
+    hideBlock: boolean
+    disableBlock: boolean
+    requireAnswer: boolean
+  }
+  validationOperator?: 'and' | 'or'
+  validationConditions?: Array<{
+    field: string
+    operator: string
+    value: string
+    group?: boolean
+  }>
+  validationErrorMessage?: string
   size?: 'sm' | 'md' | 'lg'
   textAlign?: 'left' | 'center' | 'right'
   fontSize?: 'sm' | 'md' | 'lg'
@@ -65,18 +98,19 @@ export function useFormBuilder() {
     description: 'A beautiful form built with our form builder',
     theme: {
       primaryColor: '#3b82f6',
+      secondaryColor: '#6b7280',
       backgroundColor: '#ffffff',
       textColor: '#1f2937',
+      borderColor: '#d1d5db',
       borderRadius: 'md',
       fontFamily: 'Inter',
       fontSize: 'base'
     },
     rtl: false,
-    showProgressBar: true,
+    showProgress: true,
     allowMultipleSubmissions: false,
     redirectUrl: '',
-    emailNotifications: false,
-    notificationEmail: ''
+    emailNotifications: []
   })
 
   const blockTypes = [
@@ -115,12 +149,34 @@ export function useFormBuilder() {
       label: getDefaultLabel(type),
       placeholder: getDefaultPlaceholder(type),
       required: false,
+      disabled: false,
+      hidden: false,
+      fieldState: null,
+      hideFieldName: false,
+      width: 'full',
       options: getDefaultOptions(type),
       min: getDefaultMin(type),
       max: getDefaultMax(type),
       step: getDefaultStep(type),
       defaultValue: getDefaultValue(type),
       helpText: '',
+      helpTextPosition: 'below',
+      maxLength: undefined,
+      showCharacterLimit: false,
+      generateUniqueId: false,
+      generateAutoIncrementId: false,
+      multiLine: false,
+      secretInput: false,
+      logicOperator: 'and',
+      conditions: [],
+      logicActions: {
+        hideBlock: false,
+        disableBlock: false,
+        requireAnswer: false
+      },
+      validationOperator: 'and',
+      validationConditions: [],
+      validationErrorMessage: '',
       size: 'md',
       textAlign: 'left',
       fontSize: 'md',

@@ -1,143 +1,131 @@
 <template>
-  <Head title="Form Preview" />
-
-  <AppLayout :breadcrumbs="breadcrumbs">
+  <AppLayout title="Form Preview">
     <template #header>
-      <div class="flex items-center justify-between">
-        <Heading>Form Preview</Heading>
-        <div class="flex items-center gap-2">
-          <Button @click="goBack" variant="outline" size="sm">
-            <ArrowLeftIcon class="w-4 h-4 mr-1" />
-            Back to Forms
-          </Button>
-          <Button @click="editForm" class="flex items-center gap-2">
-            <EditIcon class="w-4 h-4" />
-            Edit Form
-          </Button>
-        </div>
-      </div>
+      <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+        Form Preview
+      </h2>
     </template>
 
-    <div class="flex h-full flex-1 flex-col gap-4 rounded-xl p-4 overflow-x-auto">
-      <!-- Preview Controls -->
-      <div class="bg-card border rounded-lg p-4 mb-6">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">Preview Mode:</span>
-              <Badge variant="secondary">Client View</Badge>
+    <div class="py-12">
+      <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+        <!-- Browser-like Window Frame -->
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+          <!-- Window Title Bar -->
+          <div class="bg-gray-100 px-4 py-2 flex items-center justify-between border-b">
+            <div class="flex items-center space-x-2">
+              <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+              <div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
+              <div class="w-3 h-3 bg-green-500 rounded-full"></div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium">Form Status:</span>
-              <Badge :variant="getStatusVariant(formData.status)">
-                {{ formData.status }}
-              </Badge>
+            <div class="text-gray-600 text-sm font-medium">Form Preview</div>
+            <div class="w-4 h-4">
+              <svg class="w-full h-full text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+              </svg>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <Button @click="copyFormUrl" variant="outline" size="sm">
-              <CopyIcon class="w-4 h-4 mr-1" />
-              Copy URL
-            </Button>
-            <Button @click="openInNewTab" variant="outline" size="sm">
-              <ExternalLinkIcon class="w-4 h-4 mr-1" />
-              Open in New Tab
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      <!-- Form Preview Container -->
-      <div class="flex justify-center">
-        <div class="w-full max-w-2xl">
-          <!-- Form Card -->
-          <Card 
-            class="p-8 shadow-lg"
-            :style="{
-              backgroundColor: formData.theme?.backgroundColor || '#ffffff',
-              color: formData.theme?.textColor || '#1f2937',
-              borderRadius: formData.theme?.borderRadius || '0.5rem',
-              fontFamily: formData.theme?.fontFamily || 'Inter',
-              fontSize: formData.theme?.fontSize || '1rem'
-            }"
-          >
-            <!-- Form Header -->
+          <!-- Form Content Area -->
+          <div class="p-8 bg-white">
+            <!-- Form Title -->
             <div class="text-center mb-8">
-              <h1 class="text-3xl font-bold mb-2">{{ formData.title }}</h1>
-              <p v-if="formData.description" class="text-lg text-muted-foreground">
-                {{ formData.description }}
-              </p>
-            </div>
-
-            <!-- Progress Bar (if enabled) -->
-            <div v-if="formData.showProgressBar" class="mb-6">
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  :style="{ width: `${progressPercentage}%` }"
-                ></div>
-              </div>
-              <p class="text-sm text-muted-foreground mt-2">
-                Step {{ currentStep }} of {{ totalSteps }}
-              </p>
+              <h1 class="text-3xl font-bold text-gray-900">{{ formData.title || 'My Form' }}</h1>
             </div>
 
             <!-- Form Fields -->
             <form @submit.prevent="handleSubmit" class="space-y-6">
-              <div 
-                v-for="(block, index) in formData.blocks" 
-                :key="block.id"
-                class="form-field"
-              >
-                <component 
-                  :is="getBlockComponent(block.type)"
-                  v-bind="block"
-                  :required="block.required"
-                  :label="block.label"
-                  :placeholder="block.placeholder"
-                  :model-value="formValues[block.id]"
-                  @update:value="updateFormValue(block.id, $event)"
-                />
+              <div class="flex flex-wrap gap-4">
+                <div 
+                  v-for="(block, index) in formData.blocks" 
+                  :key="block.id"
+                  class="form-block relative"
+                  :class="getWidthClass(block.width)"
+                  :data-width="block.width"
+                  :data-width-class="getWidthClass(block.width)"
+                >
+                  <!-- Field Container with Border -->
+                  <div 
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-4 relative"
+                    :class="{ 'border-blue-400': selectedBlock?.id === block.id }"
+                  >
+                    <!-- Edit Controls -->
+                    <div class="absolute -left-12 top-1/2 transform -translate-y-1/2 flex flex-col space-y-2">
+                      <button 
+                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                        @click="addBlockAfter(index)"
+                      >
+                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                      </button>
+                      <button 
+                        class="w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+                        @click="editBlock(block)"
+                      >
+                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                      </button>
+                      <button 
+                        class="w-8 h-8 bg-red-100 hover:bg-red-200 rounded-full flex items-center justify-center transition-colors"
+                        @click="deleteBlock(block.id)"
+                      >
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                      </button>
+                    </div>
+
+                    <!-- Drag Handle -->
+                    <div class="absolute -left-6 top-1/2 transform -translate-y-1/2">
+                      <div class="w-2 h-8 flex flex-col justify-center items-center">
+                        <div class="w-1 h-1 bg-gray-400 rounded-full mb-1"></div>
+                        <div class="w-1 h-1 bg-gray-400 rounded-full mb-1"></div>
+                        <div class="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      </div>
+                    </div>
+
+                    <!-- Form Component -->
+                    <component 
+                      :is="getBlockComponent(block.type)"
+                      v-bind="block"
+                      :required="block.required"
+                      :disabled="block.disabled"
+                      :hidden="block.hidden"
+                      :field-state="block.fieldState"
+                      :hide-field-name="block.hideFieldName"
+                      :width="block.width"
+                      :label="block.label"
+                      :placeholder="block.placeholder"
+                      :help-text="block.helpText"
+                      :help-text-position="block.helpTextPosition"
+                      :max-length="block.maxLength"
+                      :show-character-limit="block.showCharacterLimit"
+                      :generate-unique-id="block.generateUniqueId"
+                      :generate-auto-increment-id="block.generateAutoIncrementId"
+                      :multi-line="block.multiLine"
+                      :secret-input="block.secretInput"
+                                          :logic-actions="block.logicActions"
+                    :validation-conditions="block.validationConditions"
+                    :validation-error-message="block.validationErrorMessage"
+                    :model-value="formValues[block.id]"
+                      @update:value="updateFormValue(block.id, $event)"
+                    />
+                  </div>
+                </div>
               </div>
 
               <!-- Submit Button -->
-              <div class="pt-6">
-                <Button 
+              <div class="text-center pt-6">
+                <button 
                   type="submit"
-                  class="w-full"
-                  size="lg"
-                  :style="{ backgroundColor: formData.theme?.primaryColor || '#3b82f6' }"
-                  :disabled="isSubmitting"
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
                 >
-                  <span v-if="isSubmitting">Submitting...</span>
-                  <span v-else>{{ formData.submitButtonText || 'Submit Form' }}</span>
-                </Button>
+                  Submit
+                </button>
               </div>
             </form>
-
-            <!-- Form Footer -->
-            <div v-if="formData.footerText" class="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-              {{ formData.footerText }}
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      <!-- Preview Info -->
-      <div class="bg-card border rounded-lg p-4 mt-6">
-        <h3 class="text-lg font-semibold mb-3">Preview Information</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <span class="font-medium">Form ID:</span>
-            <span class="ml-2 text-muted-foreground">{{ formId }}</span>
-          </div>
-          <div>
-            <span class="font-medium">Total Fields:</span>
-            <span class="ml-2 text-muted-foreground">{{ formData.blocks?.length || 0 }}</span>
-          </div>
-          <div>
-            <span class="font-medium">Created:</span>
-            <span class="ml-2 text-muted-foreground">{{ formatDate(formData.created_at) }}</span>
           </div>
         </div>
       </div>
@@ -147,259 +135,111 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { router, Head } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/layouts/AppLayout.vue'
-import { type BreadcrumbItem } from '@/types'
-import Heading from '@/components/Heading.vue'
-import { 
-  ArrowLeftIcon,
-  EditIcon,
-  CopyIcon,
-  ExternalLinkIcon
-} from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  TextInput,
-  TextArea,
-  RichTextInput,
-  DateInput,
-  UrlInput,
-  PhoneInput,
-  EmailInput,
-  SelectInput,
-  MultiSelectInput,
-  CheckboxInput,
-  RadioInput,
-  MatrixInput,
-  NumberInput,
-  RatingInput,
-  ScaleInput,
-  SliderInput,
-  FileInput,
-  SignatureInput,
-  BarcodeInput,
-  QrCodeInput,
-  PaymentInput,
-  TextBlock,
-  ImageBlock,
-  DividerBlock,
-  PageBreakBlock,
-  CodeBlock
-} from '@/components/form-blocks'
+import { getBlockComponent } from '@/components/form-blocks'
 
-interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-  phone?: string
-  last_login?: string
-  slug?: string
+interface FormBlock {
+  id: string
+  type: string
+  label?: string
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  hideFieldName?: boolean
+  width?: string
+  [key: string]: any
 }
 
-interface Props {
-  user: User
-  formId: string
+interface FormData {
+  id?: string
+  title: string
+  blocks: FormBlock[]
 }
 
-const props = defineProps<Props>()
+const props = defineProps<{
+  form: FormData
+}>()
 
-const breadcrumbs: BreadcrumbItem[] = [
-  {
-    title: 'Dashboard',
-    href: '/admin/dashboard',
-  },
-  {
-    title: 'Forms',
-    href: '/admin/form',
-  },
-  {
-    title: 'Preview Form',
-    href: `/admin/form/${props.formId}/show`,
-  },
-]
+const formData = ref<FormData>(props.form)
+const formValues = ref<Record<string, any>>({})
+const selectedBlock = ref<FormBlock | null>(null)
 
-// Mock form data - replace with actual API call
-const formData = ref({
-  id: props.formId,
-  title: 'Customer Feedback Form',
-  description: 'We value your feedback! Please take a moment to share your thoughts about our products and services.',
-  status: 'published',
-  created_at: '2024-01-15T10:30:00Z',
-  theme: {
-    primaryColor: '#3b82f6',
-    backgroundColor: '#ffffff',
-    textColor: '#1f2937',
-    borderRadius: '0.5rem',
-    fontFamily: 'Inter',
-    fontSize: '1rem'
-  },
-  showProgressBar: true,
-  submitButtonText: 'Submit Feedback',
-  footerText: 'Your feedback helps us improve our services.',
-  blocks: [
-    {
-      id: '1',
-      type: 'text',
-      label: 'Full Name',
-      placeholder: 'Enter your full name',
-      required: true,
-      size: 'md'
-    },
-    {
-      id: '2',
-      type: 'email',
-      label: 'Email Address',
-      placeholder: 'Enter your email address',
-      required: true,
-      size: 'md'
-    },
-    {
-      id: '3',
-      type: 'select',
-      label: 'How did you hear about us?',
-      placeholder: 'Select an option',
-      required: false,
-      options: [
-        { value: 'social', label: 'Social Media' },
-        { value: 'search', label: 'Search Engine' },
-        { value: 'friend', label: 'Friend/Colleague' },
-        { value: 'advertisement', label: 'Advertisement' },
-        { value: 'other', label: 'Other' }
-      ],
-      size: 'md'
-    },
-    {
-      id: '4',
-      type: 'rating',
-      label: 'Overall Satisfaction',
-      required: true,
-      maxRating: 5,
-      size: 'md'
-    },
-    {
-      id: '5',
-      type: 'textarea',
-      label: 'Additional Comments',
-      placeholder: 'Please share any additional thoughts or suggestions...',
-      required: false,
-      rows: 4,
-      size: 'md'
-    }
-  ]
+// Initialize form values
+onMounted(() => {
+  console.log('Form data:', formData.value)
+  console.log('Blocks:', formData.value.blocks)
+  formData.value.blocks?.forEach((block) => {
+    console.log('Block:', block.id, 'Width:', block.width)
+    formValues.value[block.id] = block.defaultValue || ''
+  })
 })
-
-const formValues = ref({})
-const isSubmitting = ref(false)
-const currentStep = ref(1)
-const totalSteps = ref(1)
-
-const progressPercentage = computed(() => {
-  return (currentStep.value / totalSteps.value) * 100
-})
-
-const getStatusVariant = (status: string) => {
-  switch (status) {
-    case 'published': return 'default'
-    case 'draft': return 'secondary'
-    case 'archived': return 'destructive'
-    default: return 'outline'
-  }
-}
-
-const getBlockComponent = (type: string) => {
-  const components: Record<string, any> = {
-    text: TextInput,
-    textarea: TextArea,
-    'rich-text': RichTextInput,
-    date: DateInput,
-    url: UrlInput,
-    phone: PhoneInput,
-    email: EmailInput,
-    select: SelectInput,
-    'multi-select': MultiSelectInput,
-    checkbox: CheckboxInput,
-    radio: RadioInput,
-    matrix: MatrixInput,
-    number: NumberInput,
-    rating: RatingInput,
-    scale: ScaleInput,
-    slider: SliderInput,
-    file: FileInput,
-    signature: SignatureInput,
-    barcode: BarcodeInput,
-    'qr-code': QrCodeInput,
-    payment: PaymentInput,
-    'text-block': TextBlock,
-    image: ImageBlock,
-    divider: DividerBlock,
-    'page-break': PageBreakBlock,
-    code: CodeBlock
-  }
-  return components[type] || TextInput
-}
 
 const updateFormValue = (fieldId: string, value: any) => {
   formValues.value[fieldId] = value
 }
 
-const handleSubmit = async () => {
-  isSubmitting.value = true
-  
-  // Simulate form submission
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  
+const handleSubmit = () => {
   console.log('Form submitted:', formValues.value)
-  
-  // Show success message
-  alert('Form submitted successfully! (This is a preview)')
-  
-  isSubmitting.value = false
+  // Handle form submission here
 }
 
-const goBack = () => {
-  router.visit('/admin/form')
+const editBlock = (block: FormBlock) => {
+  selectedBlock.value = block
+  // Emit event to parent or handle editing
 }
 
-const editForm = () => {
-  router.visit(`/admin/form/${props.formId}/edit`)
+const deleteBlock = (blockId: string) => {
+  // Handle block deletion
+  console.log('Delete block:', blockId)
 }
 
-const copyFormUrl = () => {
-  const url = `${window.location.origin}/forms/${props.formId}`
-  navigator.clipboard.writeText(url).then(() => {
-    alert('Form URL copied to clipboard!')
-  })
+const addBlockAfter = (index: number) => {
+  // Handle adding new block after the specified index
+  console.log('Add block after index:', index)
 }
 
-const openInNewTab = () => {
-  const url = `${window.location.origin}/forms/${props.formId}`
-  window.open(url, '_blank')
+const getWidthClass = (width?: string) => {
+  console.log('getWidthClass called with width:', width)
+  const result = (() => {
+    switch (width) {
+      case 'full': return 'w-full'
+      case '1/2': return 'w-[calc(50%-0.5rem)]'
+      case '1/3': return 'w-[calc(33.333%-0.67rem)]'
+      case '2/3': return 'w-[calc(66.667%-0.33rem)]'
+      case '1/4': return 'w-[calc(25%-0.75rem)]'
+      case '3/4': return 'w-[calc(75%-0.25rem)]'
+      default: return 'w-full'
+    }
+  })()
+  console.log('getWidthClass returning:', result)
+  return result
 }
-
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString()
-}
-
-onMounted(() => {
-  // Initialize form values
-  formData.value.blocks?.forEach(block => {
-    formValues.value[block.id] = ''
-  })
-  
-  // Calculate total steps (for progress bar)
-  totalSteps.value = formData.value.blocks?.length || 1
-})
 </script>
 
 <style scoped>
-.form-field {
-  transition: all 0.2s ease;
+/* Custom styles for the preview window */
+.border-dashed {
+  border-style: dashed;
 }
 
-.form-field:hover {
-  transform: translateY(-1px);
+/* Hover effects for edit controls */
+.form-field:hover .border-dashed {
+  border-color: #3b82f6;
+}
+
+/* Debug styles - ensure flexbox works */
+.form-block {
+  display: block;
+  min-width: 0;
+}
+
+/* Ensure the flex container works properly */
+.flex.flex-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 1rem !important;
 }
 </style> 

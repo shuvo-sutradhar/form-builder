@@ -1,23 +1,24 @@
 <template>
-  <div class="form-field">
-    <div class="relative">
-      <div class="absolute inset-0 flex items-center">
-        <span class="w-full border-t border-border"></span>
-      </div>
-      <div v-if="text" class="relative flex justify-center text-xs uppercase">
-        <span class="bg-background px-2 text-muted-foreground">{{ text }}</span>
-      </div>
-    </div>
+  <div v-if="!isHidden" class="form-field">
+    <hr class="border-border" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
-  text?: string
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
 }
 
-withDefaults(defineProps<Props>(), {
-  text: ''
+const props = withDefaults(defineProps<Props>(), {
+  hidden: false
+})
+
+// Computed properties to handle the field states
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
 })
 </script>
 

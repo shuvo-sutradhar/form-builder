@@ -1,68 +1,95 @@
 <template>
-  <div class="space-y-2">
-    <Label v-if="label" :for="id" class="text-sm font-medium">
+  <div v-if="!isHidden" class="form-field space-y-2">
+    <Label v-if="label && !hideFieldName" class="text-sm font-medium">
       {{ label }}
-      <span v-if="required" class="text-destructive">*</span>
+      <Badge v-if="isRequired" variant="destructive" class="text-xs ml-1">Required</Badge>
     </Label>
-    
     <div class="space-y-2">
-      <div
-        v-for="option in options"
+      <div 
+        v-for="option in options" 
         :key="option"
         class="flex items-center space-x-2"
       >
-        <input
-          :id="`${id}-${option}`"
-          type="checkbox"
+        <Checkbox
           :value="option"
-          :checked="modelValue.includes(option)"
-          @change="toggleOption(option)"
-          class="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+          :required="isRequired"
+          :disabled="isDisabled"
+          :checked="selectedValues.includes(option)"
+          @update:checked="toggleOption(option)"
+          :class="{ 'opacity-50 cursor-not-allowed': isDisabled }"
         />
-        <Label :for="`${id}-${option}`" class="text-sm font-normal">
+        <Label class="text-sm font-normal cursor-pointer" @click="toggleOption(option)">
           {{ option }}
         </Label>
       </div>
     </div>
-    
-    <p v-if="helpText" class="text-xs text-muted-foreground">
-      {{ helpText }}
-    </p>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 
 interface Props {
-  id: string
   label?: string
-  options?: string[]
   required?: boolean
-  helpText?: string
+  disabled?: boolean
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
+  hideFieldName?: boolean
+  width?: string
+  options?: string[]
   modelValue?: string[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => [],
-  options: () => [],
-  required: false
+  required: false,
+  disabled: false,
+  hidden: false,
+  hideFieldName: false,
+  width: 'full',
+  options: () => []
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string[]]
+  'update:value': [value: string[]]
 }>()
 
+const selectedValues = ref<string[]>(props.modelValue || [])
+
+// Computed properties to handle the field states
+const isRequired = computed(() => {
+  return props.fieldState === 'required' || props.required
+})
+
+const isDisabled = computed(() => {
+  return props.fieldState === 'disabled' || props.disabled
+})
+
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
+})
+
 const toggleOption = (option: string) => {
-  const newValue = [...props.modelValue]
-  const index = newValue.indexOf(option)
+  if (isDisabled.value) return
   
-  if (index > -1) {
-    newValue.splice(index, 1)
+  if (selectedValues.value.includes(option)) {
+    selectedValues.value = selectedValues.value.filter(val => val !== option)
   } else {
-    newValue.push(option)
+    selectedValues.value = [...selectedValues.value, option]
   }
-  
-  emit('update:modelValue', newValue)
+  emit('update:value', selectedValues.value)
 }
-</script> 
+
+watch(() => props.modelValue, (newVal) => {
+  selectedValues.value = newVal || []
+})
+</script>
+
+<style scoped>
+.form-field {
+  margin-bottom: 1rem;
+}
+</style> 

@@ -2,7 +2,7 @@
   <div class="space-y-2">
     <Label v-if="label" :for="id" class="text-sm font-medium">
       {{ label }}
-      <span v-if="required" class="text-destructive">*</span>
+      <Badge v-if="required" variant="destructive" class="text-xs ml-1">Required</Badge>
     </Label>
     
     <div class="border border-border rounded-md p-4">
@@ -42,6 +42,7 @@
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
 import { Scan } from 'lucide-vue-next'
 
 interface Props {

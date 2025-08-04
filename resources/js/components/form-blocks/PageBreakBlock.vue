@@ -1,20 +1,33 @@
 <template>
-  <div class="my-8 border-t-2 border-dashed border-border">
-    <div class="flex items-center justify-center py-4">
-      <div class="flex items-center gap-2 text-muted-foreground">
-        <FileText class="h-4 w-4" />
-        <span class="text-sm font-medium">Page Break</span>
+  <div v-if="!isHidden" class="form-field">
+    <div class="border-t border-border my-8">
+      <div class="text-center text-sm text-muted-foreground mt-2">
+        Page Break
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { FileText } from 'lucide-vue-next'
+import { computed } from 'vue'
 
 interface Props {
-  id: string
+  hidden?: boolean
+  fieldState?: 'required' | 'hidden' | 'disabled' | null
 }
 
-defineProps<Props>()
-</script> 
+const props = withDefaults(defineProps<Props>(), {
+  hidden: false
+})
+
+// Computed properties to handle the field states
+const isHidden = computed(() => {
+  return props.fieldState === 'hidden' || props.hidden
+})
+</script>
+
+<style scoped>
+.form-field {
+  margin-bottom: 1rem;
+}
+</style> 
