@@ -1,0 +1,659 @@
+<template>
+  <Head title="Create Form" />
+
+  <AppLayout :breadcrumbs="breadcrumbs">
+    <template #header>
+      <div class="flex items-center justify-between">
+        <Heading>Create New Form</Heading>
+        <Button @click="goBack" variant="outline" size="sm">
+          <ArrowLeftIcon class="w-4 h-4 mr-1" />
+          Back to Forms
+        </Button>
+      </div>
+    </template>
+
+    <!-- Modal Overlay -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold text-gray-900">Choose a base for your form</h2>
+          <Button @click="closeModal" variant="ghost" size="icon" class="h-6 w-6">
+            <XIcon class="w-4 h-4" />
+          </Button>
+        </div>
+        
+        <div class="space-y-3">
+          <!-- Blank Form Option -->
+          <Button 
+            @click="selectBlankForm"
+            variant="outline"
+            class="w-full h-auto p-4 flex items-center gap-3 text-left"
+          >
+            <MailIcon class="w-5 h-5 text-gray-500" />
+            <div>
+              <div class="font-medium text-gray-900">Blank form</div>
+              <div class="text-sm text-gray-500">Start with an empty form</div>
+            </div>
+          </Button>
+
+          <!-- AI Form Generator Option -->
+          <Button 
+            @click="selectAIGenerator"
+            variant="outline"
+            class="w-full h-auto p-4 flex items-center gap-3 text-left"
+          >
+            <ZapIcon class="w-5 h-5 text-gray-500" />
+            <div>
+              <div class="font-medium text-gray-900">AI Form Generator</div>
+              <div class="text-sm text-gray-500">Generate form with AI assistance</div>
+            </div>
+          </Button>
+
+          <!-- Browse Templates Option -->
+          <Button 
+            @click="selectTemplates"
+            variant="outline"
+            class="w-full h-auto p-4 flex items-center gap-3 text-left"
+          >
+            <GridIcon class="w-5 h-5 text-gray-500" />
+            <div>
+              <div class="font-medium text-gray-900">Browse templates</div>
+              <div class="text-sm text-gray-500">Choose from pre-built templates</div>
+            </div>
+            <ExternalLinkIcon class="w-4 h-4 text-gray-400 ml-auto" />
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="!showModal" class="flex bg-background h-[91.3vh]" :dir="formSettings.rtl ? 'rtl' : 'ltr'">
+    <!-- Left Sidebar - Form Structure -->
+    <div class="w-80 bg-card border-r border-border flex flex-col">
+      <div class="p-4 border-b border-border flex-shrink-0">
+        <h2 class="text-lg font-semibold text-foreground">Form Structure</h2>
+        <div class="mt-3 space-y-2">
+          <Button 
+            @click="addBlock"
+            class="w-full"
+            size="sm"
+          >
+            <PlusIcon class="w-4 h-4" />
+            Add Block
+          </Button>
+          <Button 
+            @click="showSettings = true"
+            variant="outline"
+            class="w-full"
+            size="sm"
+          >
+            <SettingsIcon class="w-4 h-4" />
+            Form Settings
+          </Button>
+        </div>
+      </div>
+      
+      <div class="flex-1 overflow-y-auto p-4 min-h-0">
+        <div class="space-y-2">
+                     <div 
+             v-for="(block, index) in formBlocks" 
+             :key="block.id"
+             class="p-3 bg-muted/50 rounded-lg border-2 cursor-move transition-all"
+             :class="[
+               selectedBlock?.id === block.id ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-border',
+               draggedBlockIndex === index ? 'opacity-50 scale-95' : '',
+               dropTargetIndex === index && draggedBlockIndex !== index ? 'border-blue-300 bg-blue-50' : ''
+             ]"
+             @click="selectBlock(block)"
+             draggable="true"
+             @dragstart="handleBlockDragStart($event, index)"
+             @dragover="handleBlockDragOver($event, index)"
+             @drop="handleBlockDrop($event, index)"
+             @dragenter="handleBlockDragEnter($event, index)"
+             @dragleave="handleBlockDragLeave($event)"
+           >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <GripVerticalIcon class="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                <span class="text-sm font-medium text-foreground">
+                  {{ block.label }}
+                </span>
+                <span v-if="block.required" class="text-destructive text-xs">*</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <Button 
+                  @click.stop="openBlockSettings(block)"
+                  variant="ghost"
+                  size="icon"
+                  class="h-6 w-6"
+                  title="Settings"
+                >
+                  <SettingsIcon class="w-3 h-3" />
+                </Button>
+                <Button 
+                  @click.stop="duplicateBlock(index)"
+                  variant="ghost"
+                  size="icon"
+                  class="h-6 w-6"
+                  title="Duplicate"
+                >
+                  <CopyIcon class="w-3 h-3" />
+                </Button>
+                <Button 
+                  @click.stop="removeBlock(index)"
+                  variant="ghost"
+                  size="icon"
+                  class="h-6 w-6 text-destructive hover:text-destructive"
+                  title="Delete"
+                >
+                  <TrashIcon class="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center - Form Preview -->
+    <div class="flex-1 flex flex-col">
+      <div class="bg-card border-b border-border p-4 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h1 class="text-xl font-bold text-foreground">Form Preview</h1>
+          <div class="flex items-center gap-2">
+            <Button 
+              @click="exportFormData"
+              variant="outline"
+              size="sm"
+            >
+              Export
+            </Button>
+            <Button 
+              @click="saveForm"
+              size="sm"
+            >
+              Save Form
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      <div 
+        class="flex-1 overflow-y-auto p-8 min-h-0"
+        @dragover="handleDragOver"
+        @drop="handleDrop"
+        @dragenter="handleDragEnter"
+        @dragleave="handleDragLeave"
+        :class="{ 'bg-blue-50 border-2 border-dashed border-blue-300': isDragOver }"
+      >
+        <div class="max-w-2xl mx-auto">
+          <Card 
+            class="p-8"
+            :style="{
+              backgroundColor: formSettings.theme.backgroundColor,
+              color: formSettings.theme.textColor,
+              borderRadius: formSettings.theme.borderRadius,
+              fontFamily: formSettings.theme.fontFamily,
+              fontSize: formSettings.theme.fontSize
+            }"
+          >
+            <h2 class="text-2xl font-bold mb-2">{{ formSettings.title }}</h2>
+            <p v-if="formSettings.description" class="text-muted-foreground mb-6">
+              {{ formSettings.description }}
+            </p>
+            
+            <form @submit.prevent="handleSubmit" class="space-y-6">
+              <div 
+                v-for="block in formBlocks" 
+                :key="block.id"
+                class="form-block"
+                :class="{ 'ring-2 ring-primary ring-offset-2': selectedBlock?.id === block.id }"
+              >
+                <component 
+                  :is="getBlockComponent(block.type)"
+                  v-bind="block.config"
+                  :required="block.required"
+                  :label="block.label"
+                  :model-value="block.value"
+                  @update:value="updateBlockValue(block.id, $event)"
+                />
+              </div>
+              
+              <Button 
+                type="submit"
+                class="w-full"
+                :style="{ backgroundColor: formSettings.theme.primaryColor }"
+              >
+                Submit
+              </Button>
+            </form>
+          </Card>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar - Input Blocks or Settings -->
+    <div v-if="!selectedBlock && !showSettings" class="w-80 bg-card border-l border-border flex flex-col">
+      <div class="p-4 border-b border-border flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-foreground">Form Blocks</h2>
+          <Button @click="closeBlockPanel" variant="ghost" size="icon" class="h-6 w-6">
+            <XIcon class="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <div class="flex-1 overflow-y-auto p-4 min-h-0">
+        <div class="space-y-4">
+          <div class="mb-4">
+            <h3 class="text-sm font-medium text-muted-foreground mb-2">Input Blocks</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <Button 
+                v-for="blockType in inputBlockTypes" 
+                :key="blockType.type"
+                @click="addBlockByType(blockType.type)"
+                @dragstart="handleDragStart($event, blockType.type)"
+                draggable="true"
+                variant="outline"
+                class="h-auto p-3 flex-col items-start gap-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+                size="sm"
+              >
+                <component :is="iconMap[blockType.icon]" class="w-4 h-4 text-muted-foreground" />
+                <div class="text-xs font-medium text-foreground">{{ blockType.label }}</div>
+              </Button>
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <h3 class="text-sm font-medium text-muted-foreground mb-2">Layout Blocks</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <Button 
+                v-for="blockType in layoutBlockTypes" 
+                :key="blockType.type"
+                @click="addBlockByType(blockType.type)"
+                @dragstart="handleDragStart($event, blockType.type)"
+                draggable="true"
+                variant="outline"
+                class="h-auto p-3 flex-col items-start gap-2 cursor-grab active:cursor-grabbing hover:shadow-md transition-all"
+                size="sm"
+              >
+                <component :is="iconMap[blockType.icon]" class="w-4 h-4 text-muted-foreground" />
+                <div class="text-xs font-medium text-foreground">{{ blockType.label }}</div>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block Settings Panel -->
+    <div v-if="selectedBlock && !showSettings" class="w-80 bg-card border-l border-border flex flex-col">
+      <BlockSettings 
+        :block="selectedBlock"
+        @close="selectedBlock = null"
+      />
+    </div>
+
+    <!-- Form Settings Panel -->
+    <div v-if="showSettings" class="w-80 bg-card border-l border-border flex flex-col">
+      <FormSettings 
+        :settings="formSettings"
+        @close="showSettings = false"
+      />
+    </div>
+  </div>
+  </AppLayout>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { Head } from '@inertiajs/vue3'
+import AppLayout from '@/layouts/AppLayout.vue'
+import { type BreadcrumbItem } from '@/types'
+import Heading from '@/components/Heading.vue'
+import { 
+  PlusIcon, 
+  GripVerticalIcon, 
+  TrashIcon, 
+  XIcon,
+  SettingsIcon,
+  CopyIcon,
+  TypeIcon,
+  MailIcon,
+  PhoneIcon,
+  CalendarIcon,
+  LinkIcon,
+  FileTextIcon,
+  CheckSquareIcon,
+  ListIcon,
+  HashIcon,
+  StarIcon,
+  ScaleIcon,
+  SlidersIcon,
+  ImageIcon,
+  CodeIcon,
+  SeparatorHorizontalIcon,
+  RadioIcon,
+  FileIcon,
+  ScanIcon,
+  QrCodeIcon,
+  CreditCardIcon,
+  PenToolIcon,
+  GridIcon,
+  MinusIcon,
+  ArrowLeftIcon,
+  ZapIcon,
+  ExternalLinkIcon
+} from 'lucide-vue-next'
+import {
+  TextInput,
+  TextArea,
+  RichTextInput,
+  DateInput,
+  UrlInput,
+  PhoneInput,
+  EmailInput,
+  SelectInput,
+  MultiSelectInput,
+  CheckboxInput,
+  RadioInput,
+  MatrixInput,
+  NumberInput,
+  RatingInput,
+  ScaleInput,
+  SliderInput,
+  FileInput,
+  SignatureInput,
+  BarcodeInput,
+  QrCodeInput,
+  PaymentInput,
+  TextBlock,
+  ImageBlock,
+  DividerBlock,
+  PageBreakBlock,
+  CodeBlock
+} from '@/components/form-blocks'
+import BlockSettings from '@/components/BlockSettings.vue'
+import FormSettings from '@/components/FormSettings.vue'
+import { useFormBuilder } from '@/composables/useFormBuilder'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+
+const {
+  formBlocks,
+  selectedBlock,
+  formSettings,
+  addBlock,
+  removeBlock,
+  selectBlock,
+  updateBlock,
+  duplicateBlock,
+  exportForm,
+  validateForm,
+  blockTypes
+} = useFormBuilder()
+
+const showSettings = ref(false)
+const isDragOver = ref(false)
+const draggedBlockIndex = ref<number | null>(null)
+const dropTargetIndex = ref<number | null>(null)
+const showModal = ref(true)
+
+const breadcrumbs: BreadcrumbItem[] = [
+  {
+    title: 'Dashboard',
+    href: '/admin/dashboard',
+  },
+  {
+    title: 'Forms',
+    href: '/admin/form',
+  },
+  {
+    title: 'Create Form',
+    href: '/admin/form/create',
+  },
+]
+
+// Create a mapping of icon names to actual icon components
+const iconMap: Record<string, any> = {
+  Type: TypeIcon,
+  Mail: MailIcon,
+  Phone: PhoneIcon,
+  Calendar: CalendarIcon,
+  Link: LinkIcon,
+  FileText: FileTextIcon,
+  CheckSquare: CheckSquareIcon,
+  Radio: RadioIcon,
+  List: ListIcon,
+  Hash: HashIcon,
+  Star: StarIcon,
+  Scale: ScaleIcon,
+  Sliders: SlidersIcon,
+  File: FileIcon,
+  Image: ImageIcon,
+  SeparatorHorizontal: SeparatorHorizontalIcon,
+  Code: CodeIcon,
+  Scan: ScanIcon,
+  QrCode: QrCodeIcon,
+  CreditCard: CreditCardIcon,
+  PenTool: PenToolIcon,
+  Grid: GridIcon,
+  Minus: MinusIcon
+}
+
+// Separate block types into input and layout blocks
+const inputBlockTypes = computed(() => {
+  return blockTypes.filter(block => !['text-block', 'image', 'divider', 'page-break', 'code'].includes(block.type))
+})
+
+const layoutBlockTypes = computed(() => {
+  return blockTypes.filter(block => ['text-block', 'image', 'divider', 'page-break', 'code'].includes(block.type))
+})
+
+const addBlockByType = (type: string) => {
+  addBlock(type as any)
+}
+
+const updateBlockValue = (blockId: string, value: any) => {
+  updateBlock(blockId, { value })
+}
+
+const getBlockComponent = (type: string) => {
+  const components: Record<string, any> = {
+    text: TextInput,
+    textarea: TextArea,
+    'rich-text': RichTextInput,
+    date: DateInput,
+    url: UrlInput,
+    phone: PhoneInput,
+    email: EmailInput,
+    select: SelectInput,
+    'multi-select': MultiSelectInput,
+    checkbox: CheckboxInput,
+    radio: RadioInput,
+    matrix: MatrixInput,
+    number: NumberInput,
+    rating: RatingInput,
+    scale: ScaleInput,
+    slider: SliderInput,
+    file: FileInput,
+    signature: SignatureInput,
+    barcode: BarcodeInput,
+    'qr-code': QrCodeInput,
+    payment: PaymentInput,
+    'text-block': TextBlock,
+    image: ImageBlock,
+    divider: DividerBlock,
+    'page-break': PageBreakBlock,
+    code: CodeBlock
+  }
+  return components[type] || TextInput
+}
+
+const closeBlockPanel = () => {
+  // Implementation for closing the block panel
+}
+
+const goBack = () => {
+  router.visit('/admin/form')
+}
+
+const saveForm = () => {
+  console.log('Saving form:', exportForm())
+  // Implementation for saving the form
+}
+
+const exportFormData = () => {
+  const data = exportForm()
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'form-builder-export.json'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+const handleSubmit = () => {
+  const errors = validateForm()
+  if (Object.keys(errors).length === 0) {
+    console.log('Form submitted:', formBlocks.value)
+    // Implementation for form submission
+  } else {
+    console.log('Validation errors:', errors)
+  }
+}
+
+// Modal functions
+const closeModal = () => {
+  showModal.value = false
+}
+
+const selectBlankForm = () => {
+  showModal.value = false
+  // Start with blank form (default behavior)
+}
+
+const selectAIGenerator = () => {
+  showModal.value = false
+  // TODO: Implement AI form generator
+  console.log('AI Form Generator selected')
+  // For now, just close modal and start with blank form
+}
+
+const selectTemplates = () => {
+  showModal.value = false
+  // TODO: Implement template browser
+  console.log('Browse templates selected')
+  // For now, just close modal and start with blank form
+}
+
+// Drag and Drop functionality
+const handleDragStart = (event: DragEvent, blockType: string) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('text/plain', blockType)
+    event.dataTransfer.effectAllowed = 'copy'
+  }
+}
+
+const handleDragOver = (event: DragEvent) => {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+const handleDragEnter = (event: DragEvent) => {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+const handleDragLeave = (event: DragEvent) => {
+  event.preventDefault()
+  // Only set isDragOver to false if we're leaving the drop zone entirely
+  if (!event.currentTarget?.contains(event.relatedTarget as Node)) {
+    isDragOver.value = false
+  }
+}
+
+const handleDrop = (event: DragEvent) => {
+  event.preventDefault()
+  isDragOver.value = false
+  
+  const blockType = event.dataTransfer?.getData('text/plain')
+  if (blockType) {
+    addBlock(blockType as any)
+  }
+}
+
+// Block drag and drop functionality
+const handleBlockDragStart = (event: DragEvent, index: number) => {
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'block', index }))
+    event.dataTransfer.effectAllowed = 'move'
+    draggedBlockIndex.value = index
+  }
+}
+
+const handleBlockDragOver = (event: DragEvent, index: number) => {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+  dropTargetIndex.value = index
+}
+
+const handleBlockDragEnter = (event: DragEvent, index: number) => {
+  event.preventDefault()
+  dropTargetIndex.value = index
+}
+
+const handleBlockDragLeave = (event: DragEvent) => {
+  event.preventDefault()
+  dropTargetIndex.value = null
+}
+
+const handleBlockDrop = (event: DragEvent, index: number) => {
+  event.preventDefault()
+  draggedBlockIndex.value = null
+  dropTargetIndex.value = null
+  try {
+    const data = JSON.parse(event.dataTransfer?.getData('text/plain') || '{}')
+    if (data.type === 'block' && typeof data.index === 'number' && data.index !== index) {
+      // Ensure we're working with valid indices
+      if (data.index >= 0 && data.index < formBlocks.value.length && 
+          index >= 0 && index < formBlocks.value.length) {
+        const [draggedBlock] = formBlocks.value.splice(data.index, 1)
+        formBlocks.value.splice(index, 0, draggedBlock)
+        // Re-select the block to update its position in the UI
+        selectBlock(draggedBlock)
+      }
+    }
+  } catch (error) {
+    console.error('Error during block drop:', error)
+  }
+}
+
+const openBlockSettings = (block: any) => {
+  selectBlock(block)
+  showSettings.value = true
+}
+</script>
+
+<style scoped>
+.form-block {
+  transition: all 0.2s ease;
+}
+
+.form-block:hover {
+  border-color: #3b82f6;
+}
+
+/* Drag and drop styles */
+.cursor-grab {
+  cursor: grab;
+}
+
+.cursor-grabbing {
+  cursor: grabbing;
+}
+</style> 
